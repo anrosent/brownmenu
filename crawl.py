@@ -107,7 +107,6 @@ def get_html(meal_url):
 #############################################################33
 from flask import Flask
 app = Flask(__name__)
-app.debug = True
 ERROR =  "{'status':'error'}"
 
 
