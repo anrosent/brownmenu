@@ -21,9 +21,7 @@ g_cache = defaultdict(dict)
 
 @app.route('/q/<day>/<eatery>/<meal>')
 def get_day_meal(day=None, eatery=None, meal=None):
-    print("Got req, cache is %s" % g_cache)
     v_days, v_eateries, v_meals = validate_day(day), validate_eatery(eatery), validate_meal(meal)
-    print("%s, %s, %s" % (v_days, v_eateries, v_meals))
     if v_days and v_eateries and v_meals:
 
         # If we don't have the week cached
@@ -104,5 +102,5 @@ def get_cur_day_meal():
 ##########################################################################
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0')
 
