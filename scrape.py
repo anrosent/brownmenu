@@ -1,6 +1,9 @@
 #!/usr/bin/env python
-
+import sys
 import urllib2
+import json
+
+from collections import defaultdict
 from BeautifulSoup import BeautifulSoup as soup
 
 RATTY_URL_BASE = "https://docs.google.com/spreadsheet/pub?hl=en_US&hl=en_US&key=0AlK5raaYNAu5dC14alJ1dk5BaW50RDhmUWpSUkR4Nnc&gid=0&output=html&widget=false&range=%s:%s"
@@ -47,13 +50,13 @@ day_ranges = {'monday': {
                        }
              }
 
-def parse_meal(eatery, html):
+def _parse_meal(eatery, html):
     if eatery == 'ratty':
-        return parse_meal_ratty(html)
+        return __parse_meal_ratty(html)
     else:
         return {}
 
-def parse_meal_ratty(html):
+def __parse_meal_ratty(html):
     parsed = soup(html)
     table  = parsed.find('table', {'id':'tblMain'})
     rows   = table.findAll('tr')[1:]
@@ -68,109 +71,31 @@ def parse_meal_ratty(html):
     data['Other'] = [col.text for col in rows[-1].findAll('td') if col.text and col.text != '.']
     return data
 
-def get_day(eatery, day, meals):
-    data = {}
-    for meal in meals:
-        meal_range = day_ranges[day][meal]
-        meal_url  = get_url(eatery, meal_range)
-        meal_html = get_html(meal_url)
-        meal_data = parse_meal(eatery, meal_html)
-        data[meal] = meal_data
-    return data
-
-def get_eatery_gen(eatery, days, meals):
-    data = {}
-    for day in days:
-        data[day] = get_day(eatery, day, meals)
-    return data
+def _get_meal(eatery, day, meal):
+    if eatery != 'ratty':
+        return {}
+    meal_range = day_ranges[day][meal]
+    meal_url  = _get_url(eatery, meal_range)
+    meal_html = _get_html(meal_url)
+    meal_data = _parse_meal(eatery, meal_html)
+    return meal_data
 
 def get_gen(eateries, days, meals):
-    data = {}
+    data = defaultdict(lambda : defaultdict(dict))
     for eatery in eateries:
-        data[eatery] = get_eatery_gen(eatery, days, meals)
+        for day in days:
+            for meal in meals:
+                data[eatery][day][meal] = _get_meal(eatery, day, meal)
     return data
 
-def get_all_ratty():
-    return get_gen(['ratty'], daySeq, mealSeq)
-
-def get_url(eatery, meal_range):
+def _get_url(eatery, meal_range):
     if eatery == 'ratty':
         return RATTY_URL_BASE % tuple(meal_range)
     else:
-        return 'balls'
+        raise NotImplementedError
 
-def get_html(meal_url):
+def _get_html(meal_url):
     req = urllib2.Request(meal_url)
     read = urllib2.urlopen(req).read()
     return read
-
-#############################################################33
-from flask import Flask
-app = Flask(__name__)
-ERROR =  "{'status':'error'}"
-
-
-
-@app.route('/')
-def get_all():
-    import json
-    return json.dumps({'status':'ok', 'result':{'eatery':'ratty', 'data':get_all_ratty()}}, sort_keys=True, indent=4)
-
-@app.route('/day/<day>')
-def get_day_api(day=None):
-    if day:
-        import json
-        return json.dumps({'status':'ok', 'result':{'eatery':'ratty', 'data':{'day':day, 'meals':get_day('ratty', day.lower(), mealSeq)}}}, sort_keys=True, indent=4)
-    else:
-        return ERROR
-
-@app.route('/dayN/<dayn>')
-def get_day_n(dayn=None):
-    if dayn:
-        import re
-        if re.match(r'\d+', dayn):
-            n = int(dayn)
-            if n < 7:
-                return get_day_api(daySeq[n])
-            else:
-                return ERROR
-        else:
-            return ERROR
-
-@app.route('/day/<day>/<meal>')
-def get_day_meal(day=None, meal=None):
-    if day and meal:
-        day = day.lower()
-        meal = meal.lower()
-        if day in daySeq and meal in mealSeq:
-            import json
-            return json.dumps({'status':'ok', 'result':{'eatery':'ratty', 'data':{'day':day, 'meals':get_day('ratty', day, [meal])}}}, sort_keys=True, indent=4)
-        else:
-            return ERROR
-    else:
-        return ERROR
-
-@app.route('/now')
-def get_now():
-    cur_day, cur_meal = get_cur_day_meal()
-    return get_day_meal(cur_day, cur_meal)
-
-
-def get_cur_day_meal():
-    from datetime import datetime
-    now = datetime.now()
-    cur_day = daySeq[now.isoweekday()]
-    if now.hour < 11:
-        cur_meal = 'breakfast'
-    elif now.hour < 16:
-        cur_meal = 'lunch'
-    else:
-        cur_meal = 'dinner'
-    return cur_day, cur_meal
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0')
-
-
 
