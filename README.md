@@ -8,7 +8,7 @@ This is a simple JSON REST API for the Brown University Dining hall offerings, c
 
 ### How does it do this
 
-The file ```scrape.py``` implements the scraping logic, pulling items from the menu for each implemented dining hall for each meal of the week, and ``server.py``` is a Flask server that caches the week's worth of scraped data in memory on the first request every day, serving from the cache thereafter.
+The file ```scrape.py``` implements the scraping logic, pulling items from the menu for each implemented dining hall for each meal of the week, and ```server.py``` is a Flask server that caches the week's worth of scraped data in memory on the first request every day, serving from the cache thereafter.
 
 ### Looking ahead
 
